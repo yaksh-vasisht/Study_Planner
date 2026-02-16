@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="nav-bar">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="subjects.html">Subjects</a>
+      <a href="timeline.html">Timeline</a>
+      <a href="plan.html">Study Plan</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="#" onclick="authAPI.logout()">Logout</a>
+    </div>
+
+    <div class="dashboard-container">
+      <div class="welcome">
+        <h1 id="welcomeMessage">Welcome, Student 👋</h1>
+        <p>Your personalized study overview for today.</p>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <h3>Subjects</h3>
+        <p><strong id="subjectsCount">0</strong> subjects</p>
+        <button class="btn" onclick="location.href = 'subjects.html'">
+          Manage Subjects
+        </button>
+      </div>
+
+      <div class="card">
+        <h3>Today's Study Plan</h3>
+        <div id="todayPlan">
+          <p>Loading...</p>
+        </div>
+        <button class="btn" onclick="location.href = 'timeline.html'">
+          View Full Timeline
+        </button>
+      </div>
+
+      <div class="card">
+        <h3>Consistency</h3>
+        <h2 id="consistencyScore">0%</h2>
+        <div id="streakDisplay"></div>
+      </div>
+
+      <div class="card" id="recommendationsCard">
+        <h3>Study Recommendations</h3>
+        <div id="recommendations">Loading...</div>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Dashboard page loaded");
+
+      // Check authentication FIRST
+      const token = localStorage.getItem("token");
+      console.log("Token check:", token ? "EXISTS" : "NULL");
+
+      if (!token) {
+        console.log("No token found, redirecting to login");
+        alert("Please login first");
+        window.location.href = "login.html";
+      } else {
+        console.log("Token found, loading dashboard");
+        loadDashboard();
+      }
+
+      async function loadDashboard() {
+        try {
+          // Show user name
+          const user = authAPI.getUser();
+          console.log("User data:", user);
+
+          if (user) {
+            document.getElementById("welcomeMessage").textContent =
+              `Welcome, ${user.name} 👋`;
+          }
+
+          // Load subjects count
+          console.log("Loading subjects...");
+          const subjects = await subjectsAPI.getAll();
+          console.log("Subjects loaded:", subjects.length);
+          document.getElementById("subjectsCount").textContent =
+            subjects.length;
+
+          // Load current plan
+          console.log("Loading plan...");
+          const plan = await plansAPI.getCurrent();
+          console.log("Plan loaded:", plan);
+          loadTodayPlan(plan);
+
+          // Load progress
+          console.log("Loading progress...");
+          const progress = await progressAPI.getWeekly();
+          console.log("Progress loaded:", progress);
+          loadConsistency(progress);
+
+          // Load streak
+          console.log("Loading streak...");
+          const streakData = await progressAPI.getStreak();
+          console.log("Streak loaded:", streakData);
+          loadStreak(streakData);
+
+          // Load recommendations
+          console.log("Loading recommendations...");
+          const recommendations = await subjectsAPI.getRecommendations();
+          console.log("Recommendations loaded:", recommendations.length);
+          loadRecommendations(recommendations);
+        } catch (error) {
+          console.error("Error loading dashboard:", error);
+          if (error.message && error.message.includes("401")) {
+            alert("Session expired. Please login again.");
+            authAPI.logout();
+          }
+        }
+      }
+
+      function loadTodayPlan(plan) {
+        const planBox = document.getElementById("todayPlan");
+
+        if (!plan.sessions || plan.sessions.length === 0) {
+          planBox.innerHTML = "<p>No study plan generated yet.</p>";
+          return;
+        }
+
+        let html = "";
+        plan.sessions.slice(0, 3).forEach((session) => {
+          const start = new Date(session.scheduledStart).toLocaleTimeString(
+            "en-US",
+            { hour: "numeric", minute: "2-digit" },
+          );
+          const end = new Date(session.scheduledEnd).toLocaleTimeString(
+            "en-US",
+            { hour: "numeric", minute: "2-digit" },
+          );
+          html += `<p>• ${start} — ${end} → ${session.subjectName}</p>`;
+        });
+
+        planBox.innerHTML = html;
+      }
+
+      function loadConsistency(progress) {
+        const consistency = progress.percentage || 0;
+        document.getElementById("consistencyScore").textContent =
+          consistency + "%";
+      }
+
+      function loadStreak(streakData) {
+        const streak = streakData.streak || 0;
+        const streakDisplay = document.getElementById("streakDisplay");
+
+        if (streak > 0) {
+          streakDisplay.innerHTML = `<p>🔥 ${streak} day streak!</p>`;
+        } else {
+          streakDisplay.innerHTML = "";
+        }
+      }
+
+      function loadRecommendations(recommendations) {
+        const container = document.getElementById("recommendations");
+
+        if (recommendations.length === 0) {
+          container.innerHTML = "<p>Add subjects to get recommendations!</p>";
+          return;
+        }
+
+        let html =
+          '<p style="font-size: 14px; color: #666; margin-bottom: 15px;">Smart suggestions based on your patterns</p>';
+
+        recommendations.slice(0, 3).forEach((subject, index) => {
+          const badges = ["🔥 TOP PRIORITY", "⚡ FOCUS NEXT", "📖 REVIEW"];
+          const colors = ["#ff6b6b", "#ffd93d", "#4ecdc4"];
+
+          html += `
+            <div style="
+              background: #f8f9fa;
+              padding: 12px;
+              margin: 10px 0;
+              border-radius: 8px;
+              border-left: 4px solid ${colors[index]};
+            ">
+              <strong>${subject.name}</strong>
+              <span style="
+                background: ${colors[index]};
+                color: white;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                margin-left: 8px;
+              ">${badges[index]}</span>
+              <br>
+              <small style="color: #666;">
+                Last studied: ${subject.daysSinceStudied} days ago • 
+                ${subject.totalHours || 0}h total • 
+                ${subject.priority.toUpperCase()}
+              </small>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      }
+    </script>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+  </body>
+</html>
