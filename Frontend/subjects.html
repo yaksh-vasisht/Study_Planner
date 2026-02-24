@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subjects | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="nav-bar">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="subjects.html">Subjects</a>
+      <a href="timeline.html">Timeline</a>
+      <a href="plan.html">Study Plan</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="#" onclick="authAPI.logout()">Logout</a>
+    </div>
+
+    <div class="subjects-container">
+      <h1>Manage Subjects</h1>
+      <p>Add your subjects and set difficulty & priority.</p>
+
+      <div class="form-card">
+        <h3>Add New Subject</h3>
+
+        <input
+          id="subjectName"
+          type="text"
+          placeholder="Subject Name (e.g., Data Structures)"
+          required
+        />
+
+        <select id="difficulty" required>
+          <option value="">Select Difficulty</option>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+
+        <select id="priority" required>
+          <option value="">Select Priority</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <button class="btn" onclick="addSubject()">Add Subject</button>
+      </div>
+
+      <div id="subjectsGrid" class="grid">
+        <!-- Dynamically loaded subjects -->
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Subjects page loaded");
+
+      // Check auth
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login first");
+        window.location.href = "login.html";
+      }
+
+      async function loadSubjects() {
+        console.log("Loading subjects...");
+        try {
+          const subjects = await subjectsAPI.getAll();
+          console.log("Subjects loaded:", subjects);
+          renderSubjects(subjects);
+        } catch (error) {
+          console.error("Error loading subjects:", error);
+          alert("Failed to load subjects. Please check console.");
+        }
+      }
+
+      async function addSubject() {
+        const name = document.getElementById("subjectName").value;
+        const difficulty = document.getElementById("difficulty").value;
+        const priority = document.getElementById("priority").value;
+
+        console.log("Adding subject:", { name, difficulty, priority });
+
+        if (name === "" || difficulty === "" || priority === "") {
+          alert("Please fill all fields");
+          return;
+        }
+
+        try {
+          const result = await subjectsAPI.create(name, difficulty, priority);
+          console.log("Subject added:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ ${name} added successfully!`);
+
+          // Clear inputs
+          document.getElementById("subjectName").value = "";
+          document.getElementById("difficulty").value = "";
+          document.getElementById("priority").value = "";
+
+          // Reload subjects
+          loadSubjects();
+        } catch (error) {
+          console.error("Error adding subject:", error);
+          alert("Failed to add subject: " + error.message);
+        }
+      }
+
+      async function deleteSubject(id, name) {
+        if (!confirm(`Delete ${name}?`)) return;
+
+        console.log("Deleting subject:", id);
+
+        try {
+          await subjectsAPI.delete(id);
+          alert(`🗑️ ${name} deleted`);
+          loadSubjects();
+        } catch (error) {
+          console.error("Error deleting subject:", error);
+          alert("Failed to delete subject");
+        }
+      }
+
+      function renderSubjects(subjects) {
+        const grid = document.getElementById("subjectsGrid");
+        grid.innerHTML = "";
+
+        if (subjects.length === 0) {
+          grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: white; border-radius: 12px;">
+              <p style="font-size: 1.1rem; color: #64748b;">No subjects added yet. Add your first subject above!</p>
+            </div>
+          `;
+          return;
+        }
+
+        subjects.forEach((sub) => {
+          const div = document.createElement("div");
+          div.classList.add("subject-item");
+
+          const daysSince = Math.floor(
+            (new Date() - new Date(sub.lastStudied)) / (1000 * 60 * 60 * 24),
+          );
+
+          div.innerHTML = `
+            <h4>${sub.name}</h4>
+            <span class="tag ${sub.difficulty}">${sub.difficulty}</span>
+            <span class="tag medium">Priority: ${sub.priority}</span>
+            <br>
+            <small style="color: #666;">
+              ${sub.totalHours || 0}h studied • Last: ${daysSince} days ago
+            </small>
+            <br><br>
+            <button class="btn" onclick="deleteSubject('${sub._id}', '${sub.name}')">Delete</button>
+          `;
+
+          grid.appendChild(div);
+        });
+      }
+
+      // Load subjects on page load
+      loadSubjects();
+    </script>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+  </body>
+</html>

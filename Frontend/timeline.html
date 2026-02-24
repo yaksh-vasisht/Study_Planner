@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Study Timeline | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+
+    <style>
+      .timeline-container {
+        width: 95%;
+        max-width: 1600px;
+        margin: 40px auto;
+        padding: 0 1rem;
+      }
+
+      .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .timeline-legend {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        flex-wrap: wrap;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .legend-box {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+      }
+
+      /* Grid Container */
+      .timeline-grid {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+        padding: 1rem;
+      }
+
+      .grid-table {
+        min-width: 1200px;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      /* Time Headers */
+      .time-header {
+        background: #1e1e2f;
+        color: white;
+        font-weight: 600;
+        padding: 12px 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        border: 1px solid #2a2a3f;
+        min-width: 80px;
+      }
+
+      /* Day Labels */
+      .day-label {
+        background: #f8f9fa;
+        font-weight: 600;
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        color: #1e293b;
+        white-space: nowrap;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+      }
+
+      /* Grid Cells - Editable */
+      .time-slot {
+        border: 1px solid #e2e8f0;
+        padding: 0;
+        min-width: 80px;
+        height: 70px;
+        background: #fafafa;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .time-slot:hover:not(.has-session) {
+        background: #f0f4ff;
+        border-color: #667eea;
+      }
+
+      .time-slot:hover:not(.has-session)::after {
+        content: "+";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        color: #667eea;
+        font-weight: bold;
+      }
+
+      /* Subject Dropdown */
+      .subject-dropdown {
+        width: 100%;
+        height: 100%;
+        border: 2px solid #667eea;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        background: white;
+        cursor: pointer;
+        outline: none;
+      }
+
+      .subject-dropdown:focus {
+        border-color: #764ba2;
+      }
+
+      /* Session Cards */
+      .session-card {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+        border-radius: 6px;
+        padding: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        user-select: none;
+      }
+
+      .session-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        z-index: 5;
+      }
+
+      .session-card.completed {
+        opacity: 0.7;
+        border: 2px solid #22c55e;
+      }
+
+      .session-card.scheduled {
+        border: 2px solid transparent;
+      }
+
+      /* Resize Handle */
+      .resize-handle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        background: rgba(255, 255, 255, 0.3);
+        cursor: ew-resize;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .session-card:hover .resize-handle {
+        opacity: 1;
+      }
+
+      .resize-handle:hover {
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      /* Subject Colors */
+      .subject-dsa {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .subject-dbms {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+      }
+      .subject-java {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+      }
+      .subject-os {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+      }
+      .subject-networks {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+      }
+      .subject-default {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #1e293b;
+      }
+
+      .session-name {
+        font-weight: 600;
+        margin-bottom: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .session-duration {
+        font-size: 0.75rem;
+        opacity: 0.9;
+      }
+
+      .session-status {
+        font-size: 1.1rem;
+        position: absolute;
+        top: 4px;
+        right: 6px;
+      }
+
+      /* Delete Button on Session */
+      .session-delete {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .session-card:hover .session-delete {
+        opacity: 1;
+      }
+
+      .session-delete:hover {
+        background: rgba(220, 38, 38, 1);
+      }
+
+      /* Empty State */
+      .empty-timeline {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #64748b;
+      }
+
+      .empty-timeline h3 {
+        color: #1e293b;
+        margin-bottom: 1rem;
+      }
+
+      /* Loading State */
+      .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+      }
+
+      /* Help Text */
+      .help-text {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .timeline-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .timeline-legend {
+          font-size: 0.8rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="nav-bar">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="subjects.html">Subjects</a>
+      <a href="timeline.html">Timeline</a>
+      <a href="plan.html">Study Plan</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="#" onclick="authAPI.logout()">Logout</a>
+    </div>
+
+    <div class="timeline-container">
+      <div class="timeline-header">
+        <div>
+          <h1>📅 Weekly Timeline</h1>
+          <p>Click any cell to add a session, drag edge to extend</p>
+        </div>
+        <div class="timeline-legend">
+          <div class="legend-item">
+            <div
+              class="legend-box"
+              style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              "
+            ></div>
+            <span>DSA</span>
+          </div>
+          <div class="legend-item">
+            <div
+              class="legend-box"
+              style="
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              "
+            ></div>
+            <span>DBMS</span>
+          </div>
+          <div class="legend-item">
+            <div
+              class="legend-box"
+              style="
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+              "
+            ></div>
+            <span>Java</span>
+          </div>
+          <div class="legend-item">
+            <span style="font-weight: 600">✓ Completed</span>
+          </div>
+          <div class="legend-item">
+            <span style="font-weight: 600">⏳ Scheduled</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-text">
+        <strong>💡 How to Use:</strong><br />
+        • <strong>Add:</strong> Click empty cell → Select subject<br />
+        • <strong>Resize:</strong> Drag right edge of session to extend<br />
+        • <strong>Complete:</strong> Double-click session (or select + press
+        Space)<br />
+        • <strong>Delete:</strong> Click ✕ button or select + press Delete
+        key<br />
+        • <strong>Select:</strong> Single-click session (blue border)<br />
+        • <strong>Deselect:</strong> Press Escape
+      </div>
+
+      <div class="timeline-grid">
+        <div id="gridContent" class="loading">
+          Loading your study schedule...
+        </div>
+      </div>
+    </div>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Excel-style timeline loaded");
+
+      // Check auth
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login first");
+        window.location.href = "login.html";
+      }
+
+      // Time slots (24-hour format)
+      const timeSlots = [
+        "06:00",
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00",
+        "20:00",
+        "21:00",
+        "22:00",
+        "23:00",
+      ];
+
+      const days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
+
+      let allSubjects = [];
+      let currentPlan = null;
+      let editingCell = null;
+      let selectedSessionId = null; // Track selected session for keyboard actions
+
+      // Resize state
+      let isResizing = false;
+      let resizingSessionId = null;
+      let resizeStartX = 0;
+      let resizeStartWidth = 0;
+      let originalDuration = 0;
+
+      // Subject color mapping
+      const subjectColors = {
+        dsa: "subject-dsa",
+        "data structures": "subject-dsa",
+        dbms: "subject-dbms",
+        database: "subject-dbms",
+        java: "subject-java",
+        os: "subject-os",
+        "operating system": "subject-os",
+        networks: "subject-networks",
+        networking: "subject-networks",
+      };
+
+      function getSubjectClass(subjectName) {
+        const normalized = subjectName.toLowerCase().trim();
+        return subjectColors[normalized] || "subject-default";
+      }
+
+      function formatTime12h(time24) {
+        const [hours, minutes] = time24.split(":");
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${h12}${ampm}`;
+      }
+
+      function parseTime(timeStr) {
+        const date = new Date(timeStr);
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        return hours + minutes / 60;
+      }
+
+      function getDayName(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-US", { weekday: "long" });
+      }
+
+      // Load subjects and timeline
+      async function init() {
+        try {
+          // Load subjects first
+          allSubjects = await subjectsAPI.getAll();
+          console.log("Subjects loaded:", allSubjects);
+
+          if (allSubjects.length === 0) {
+            document.getElementById("gridContent").innerHTML = `
+              <div class="empty-timeline">
+                <h3>📚 No Subjects Yet</h3>
+                <p>Go to <a href="subjects.html" style="color: #667eea; font-weight: 600;">Subjects</a> page to add your subjects first!</p>
+              </div>
+            `;
+            return;
+          }
+
+          // Load timeline
+          await loadTimeline();
+
+          // Setup keyboard shortcuts
+          document.addEventListener("keydown", handleKeyboard);
+        } catch (error) {
+          console.error("Error initializing:", error);
+          document.getElementById("gridContent").innerHTML = `
+            <div class="empty-timeline">
+              <h3>❌ Error Loading</h3>
+              <p>Could not load timeline. Please refresh the page.</p>
+            </div>
+          `;
+        }
+      }
+
+      // Keyboard shortcuts
+      function handleKeyboard(event) {
+        // Delete key - delete selected session
+        if (event.key === "Delete" && selectedSessionId) {
+          event.preventDefault();
+          const session = findSessionById(selectedSessionId);
+          if (session) {
+            deleteSessionById(selectedSessionId, session.subjectName);
+          }
+        }
+
+        // Space key - toggle complete for selected session
+        if (event.key === " " && selectedSessionId) {
+          event.preventDefault();
+          toggleSessionComplete(selectedSessionId);
+        }
+
+        // Escape key - deselect
+        if (event.key === "Escape") {
+          selectedSessionId = null;
+          document.querySelectorAll(".session-card").forEach((card) => {
+            card.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+          });
+        }
+      }
+
+      // Helper functions for keyboard shortcuts
+      async function deleteSessionById(sessionId, subjectName) {
+        if (!confirm(`Delete ${subjectName} session?`)) {
+          return;
+        }
+
+        try {
+          const result = await plansAPI.deleteSession(sessionId);
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+          selectedSessionId = null;
+          await loadTimeline();
+        } catch (error) {
+          console.error("Error deleting session:", error);
+          alert("Failed to delete session");
+        }
+      }
+
+      async function toggleSessionComplete(sessionId) {
+        try {
+          await plansAPI.completeSession(sessionId);
+          await loadTimeline();
+        } catch (error) {
+          console.error("Error toggling session:", error);
+          alert("Failed to update session");
+        }
+      }
+
+      async function loadTimeline() {
+        console.log("Loading timeline...");
+
+        try {
+          const plan = await plansAPI.getCurrent();
+          console.log("Plan loaded:", plan);
+          currentPlan = plan;
+
+          renderGrid(plan.sessions || []);
+        } catch (error) {
+          console.error("Error loading timeline:", error);
+          renderGrid([]);
+        }
+      }
+
+      function renderGrid(sessions) {
+        console.log(`Rendering grid with ${sessions.length} sessions`);
+
+        // Organize sessions by day and time
+        const sessionMap = {};
+
+        sessions.forEach((session) => {
+          const dayName = getDayName(session.scheduledStart);
+          const startTime = parseTime(session.scheduledStart);
+          const key = `${dayName}-${Math.floor(startTime)}`;
+          sessionMap[key] = session;
+        });
+
+        // Build table HTML
+        let html = `
+          <table class="grid-table">
+            <thead>
+              <tr>
+                <th class="time-header" style="background: #f8f9fa; color: #1e293b;">Day</th>
+                ${timeSlots
+                  .map(
+                    (time) => `
+                  <th class="time-header">${formatTime12h(time)}</th>
+                `,
+                  )
+                  .join("")}
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        // Render each day
+        days.forEach((day) => {
+          html += `<tr><td class="day-label">${day}</td>`;
+
+          const occupiedSlots = new Set();
+
+          // Create cells for each time slot
+          for (let i = 0; i < timeSlots.length; i++) {
+            if (occupiedSlots.has(i)) {
+              continue;
+            }
+
+            const timeValue = parseInt(timeSlots[i].split(":")[0]);
+            const key = `${day}-${timeValue}`;
+            const session = sessionMap[key];
+
+            if (session) {
+              // Calculate colspan
+              const sessionStart = parseTime(session.scheduledStart);
+              const sessionEnd = parseTime(session.scheduledEnd);
+              const duration = sessionEnd - sessionStart;
+              const colspan = Math.max(1, Math.ceil(duration));
+
+              // Mark slots as occupied
+              for (let j = 0; j < colspan; j++) {
+                occupiedSlots.add(i + j);
+              }
+
+              const subjectClass = getSubjectClass(session.subjectName);
+              const statusClass = session.completed ? "completed" : "scheduled";
+              const statusIcon = session.completed ? "✓" : "⏳";
+
+              html += `
+                <td class="time-slot has-session" colspan="${colspan}">
+                  <div class="session-card ${subjectClass} ${statusClass}" 
+                       onclick="clickSession(event, '${session._id}', ${session.completed})"
+                       data-session-id="${session._id}">
+                    <button class="session-delete" onclick="deleteSession(event, '${session._id}', '${session.subjectName}')">✕</button>
+                    <span class="session-status">${statusIcon}</span>
+                    <div class="session-name">${session.subjectName}</div>
+                    <div class="session-duration">${session.allocated}h</div>
+                    <div class="resize-handle" onmousedown="startResize(event, '${session._id}')"></div>
+                  </div>
+                </td>
+              `;
+            } else {
+              // Empty cell - editable
+              html += `
+                <td class="time-slot" 
+                    data-day="${day}" 
+                    data-time="${timeSlots[i]}"
+                    onclick="editCell(event, '${day}', '${timeSlots[i]}')">
+                </td>
+              `;
+            }
+          }
+
+          html += `</tr>`;
+        });
+
+        html += `
+            </tbody>
+          </table>
+        `;
+
+        document.getElementById("gridContent").innerHTML = html;
+        console.log("Grid rendered successfully");
+      }
+
+      // Edit cell - show dropdown
+      function editCell(event, day, time) {
+        event.stopPropagation();
+
+        if (editingCell) {
+          return; // Already editing another cell
+        }
+
+        const cell = event.currentTarget;
+        editingCell = cell;
+
+        console.log("Editing cell:", day, time);
+
+        // Create dropdown
+        const select = document.createElement("select");
+        select.className = "subject-dropdown";
+
+        // Add placeholder
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select subject...";
+        select.appendChild(placeholder);
+
+        // Add subjects
+        allSubjects.forEach((subject) => {
+          const option = document.createElement("option");
+          option.value = subject._id;
+          option.textContent = subject.name;
+          select.appendChild(option);
+        });
+
+        // On change, create session
+        select.onchange = async () => {
+          if (select.value) {
+            await createSessionFromCell(day, time, select.value);
+          }
+        };
+
+        // On blur, remove dropdown
+        select.onblur = () => {
+          setTimeout(() => {
+            editingCell = null;
+            loadTimeline();
+          }, 200);
+        };
+
+        cell.innerHTML = "";
+        cell.appendChild(select);
+        select.focus();
+      }
+
+      // Create session from cell
+      async function createSessionFromCell(day, time, subjectId) {
+        const subject = allSubjects.find((s) => s._id === subjectId);
+        if (!subject) return;
+
+        console.log("Creating session:", { day, time, subject: subject.name });
+
+        try {
+          const result = await plansAPI.addSession(subjectId, day, time, 1); // Default 1 hour
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          console.log("Session created:", result);
+          editingCell = null;
+          await loadTimeline();
+        } catch (error) {
+          console.error("Error creating session:", error);
+          alert("Failed to create session: " + error.message);
+          editingCell = null;
+          await loadTimeline();
+        }
+      }
+
+      // Click session - toggle complete
+      async function clickSession(event, sessionId, isCompleted) {
+        event.stopPropagation();
+
+        // Don't toggle if clicking delete button or resize handle
+        if (
+          event.target.classList.contains("session-delete") ||
+          event.target.classList.contains("resize-handle")
+        ) {
+          return;
+        }
+
+        // Track selection for keyboard shortcuts
+        selectedSessionId = sessionId;
+
+        // Highlight selected session
+        document.querySelectorAll(".session-card").forEach((card) => {
+          card.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+        });
+        const sessionCard = document.querySelector(
+          `[data-session-id="${sessionId}"]`,
+        );
+        if (sessionCard) {
+          sessionCard.style.boxShadow = "0 0 0 3px #667eea";
+        }
+
+        console.log("Session selected:", sessionId);
+
+        // Toggle complete on click (not on first selection)
+        if (event.detail === 2) {
+          // Double click
+          console.log("Double-click: Toggling session:", sessionId);
+          try {
+            await plansAPI.completeSession(sessionId);
+            await loadTimeline();
+          } catch (error) {
+            console.error("Error toggling session:", error);
+            alert("Failed to update session");
+          }
+        }
+      }
+
+      // Delete session
+      async function deleteSession(event, sessionId, subjectName) {
+        event.stopPropagation();
+
+        if (!confirm(`Delete ${subjectName} session?`)) {
+          return;
+        }
+
+        console.log("Deleting session:", sessionId);
+
+        try {
+          const result = await plansAPI.deleteSession(sessionId);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          console.log("Session deleted:", result);
+          await loadTimeline();
+        } catch (error) {
+          console.error("Error deleting session:", error);
+          alert("Failed to delete session");
+        }
+      }
+
+      // Resize functionality
+      function startResize(event, sessionId) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        console.log("Resize started for:", sessionId);
+
+        isResizing = true;
+        resizingSessionId = sessionId;
+        resizeStartX = event.clientX;
+
+        // Find the session card
+        const sessionCard = event.target.closest(".session-card");
+        resizeStartWidth = sessionCard.offsetWidth;
+
+        // Get original duration
+        const session = findSessionById(sessionId);
+        if (session) {
+          originalDuration = session.allocated;
+        }
+
+        // Add visual feedback
+        sessionCard.style.opacity = "0.7";
+        sessionCard.style.cursor = "ew-resize";
+        document.body.style.cursor = "ew-resize";
+
+        // Add event listeners
+        document.addEventListener("mousemove", handleResize);
+        document.addEventListener("mouseup", endResize);
+      }
+
+      function handleResize(event) {
+        if (!isResizing) return;
+
+        const deltaX = event.clientX - resizeStartX;
+        const cellWidth = 80; // Approximate cell width
+        const cellsToExtend = Math.round(deltaX / cellWidth);
+
+        // Calculate new duration (minimum 1 hour)
+        const newDuration = Math.max(1, originalDuration + cellsToExtend);
+
+        // Find and update visual preview
+        const sessionCard = document.querySelector(
+          `[data-session-id="${resizingSessionId}"]`,
+        );
+        if (sessionCard) {
+          const cell = sessionCard.closest("td");
+          const newWidth = cellWidth * newDuration;
+          sessionCard.style.width = `${newWidth}px`;
+
+          // Show duration preview
+          const durationEl = sessionCard.querySelector(".session-duration");
+          if (durationEl) {
+            durationEl.textContent = `${newDuration}h (drag)`;
+          }
+        }
+      }
+
+      async function endResize(event) {
+        if (!isResizing) return;
+
+        console.log("Resize ended");
+
+        // Calculate final duration
+        const deltaX = event.clientX - resizeStartX;
+        const cellWidth = 80;
+        const cellsToExtend = Math.round(deltaX / cellWidth);
+        const newDuration = Math.max(1, originalDuration + cellsToExtend);
+
+        // Remove event listeners
+        document.removeEventListener("mousemove", handleResize);
+        document.removeEventListener("mouseup", endResize);
+
+        // Reset cursors
+        document.body.style.cursor = "";
+
+        // Reset state
+        isResizing = false;
+        const sessionId = resizingSessionId;
+        resizingSessionId = null;
+
+        // Only update if duration changed
+        if (newDuration !== originalDuration) {
+          console.log(
+            `Updating duration from ${originalDuration}h to ${newDuration}h`,
+          );
+
+          try {
+            const result = await plansAPI.updateDuration(
+              sessionId,
+              newDuration,
+            );
+
+            if (result.error) {
+              alert("Error: " + result.error);
+            } else {
+              console.log("Duration updated:", result);
+            }
+
+            // Reload timeline
+            await loadTimeline();
+          } catch (error) {
+            console.error("Error updating duration:", error);
+            alert("Failed to update duration");
+            await loadTimeline();
+          }
+        } else {
+          // Just reload to reset visual state
+          await loadTimeline();
+        }
+      }
+
+      function findSessionById(sessionId) {
+        if (!currentPlan || !currentPlan.sessions) return null;
+        return currentPlan.sessions.find((s) => s._id === sessionId);
+      }
+
+      // Initialize
+      init();
+    </script>
+  </body>
+</html>

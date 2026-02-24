@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="auth-container">
+      <h2>Create Account</h2>
+
+      <form id="signupForm">
+        <input type="text" id="name" placeholder="Full Name" required />
+        <input type="email" id="email" placeholder="Email" required />
+        <input
+          type="password"
+          id="password"
+          placeholder="Create Password"
+          required
+        />
+        <input
+          type="password"
+          id="confirmPassword"
+          placeholder="Confirm Password"
+          required
+        />
+
+        <select id="year" required>
+          <option value="">Select Year</option>
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+          <option value="5">5th Year</option>
+        </select>
+
+        <button type="submit" class="btn">Sign Up</button>
+      </form>
+
+      <div class="links">
+        <p>Already have an account? <a href="login.html">Login</a></p>
+        <p><a href="index.html">Back to Home</a></p>
+      </div>
+    </div>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Signup page loaded");
+
+      document
+        .getElementById("signupForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          console.log("Signup form submitted");
+
+          const name = document.getElementById("name").value;
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const confirmPassword =
+            document.getElementById("confirmPassword").value;
+          const year = parseInt(document.getElementById("year").value);
+
+          if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+          }
+
+          if (password.length < 6) {
+            alert("Password must be at least 6 characters");
+            return;
+          }
+
+          console.log("Creating account for:", email);
+
+          try {
+            const data = await authAPI.register(name, email, password, year);
+            console.log("Register response:", data);
+
+            if (data.error) {
+              console.error("Register error:", data.error);
+              alert("Registration failed: " + data.error);
+            } else if (data.token) {
+              console.log("Registration successful!");
+              alert("Account created successfully! Welcome " + data.user.name);
+
+              // Verify token is saved
+              const savedToken = localStorage.getItem("token");
+              console.log("Token saved check:", savedToken ? "YES" : "NO");
+
+              setTimeout(() => {
+                console.log("Redirecting to dashboard...");
+                window.location.href = "dashboard.html";
+              }, 1000);
+            } else {
+              console.error("No token in response!");
+              alert("Registration failed: No token received");
+            }
+          } catch (error) {
+            console.error("Register exception:", error);
+            alert("Error: " + error.message);
+          }
+        });
+    </script>
+  </body>
+</html>

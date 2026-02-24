@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Plan | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .plan-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .tab-btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        background: #e2e8f0;
+        color: #64748b;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .tab-btn:hover {
+        background: #cbd5e1;
+      }
+
+      .tab-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .plan-modes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .mode-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .mode-card h3 {
+        margin-bottom: 1rem;
+        color: #1e293b;
+      }
+
+      .manual-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .sessions-list {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 2rem;
+      }
+
+      .session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid #667eea;
+      }
+
+      .session-item.completed {
+        opacity: 0.6;
+        border-left-color: #22c55e;
+      }
+
+      .session-info {
+        flex: 1;
+      }
+
+      .session-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+      }
+
+      .session-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .btn-small {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+      }
+
+      .btn-delete {
+        background: #ef4444;
+      }
+
+      .btn-delete:hover {
+        background: #dc2626;
+      }
+
+      .empty-sessions {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+      }
+
+      @media (max-width: 968px) {
+        .plan-modes {
+          grid-template-columns: 1fr;
+        }
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="nav-bar">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="subjects.html">Subjects</a>
+      <a href="timeline.html">Timeline</a>
+      <a href="plan.html">Study Plan</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="#" onclick="authAPI.logout()">Logout</a>
+    </div>
+
+    <div class="plan-container">
+      <h1>📚 Study Plan Manager</h1>
+      <p>Create your weekly study schedule - auto-generate or build manually</p>
+
+      <!-- Tabs -->
+      <div class="plan-tabs">
+        <button class="tab-btn active" onclick="switchTab('quick')">
+          🚀 Quick Generate
+        </button>
+        <button class="tab-btn" onclick="switchTab('manual')">
+          ✏️ Manual Builder
+        </button>
+        <button class="tab-btn" onclick="switchTab('templates')">
+          📁 Templates
+        </button>
+      </div>
+
+      <!-- Quick Generate Tab -->
+      <div id="quickTab" class="tab-content active">
+        <div class="mode-card">
+          <h3>Quick Generate Plan</h3>
+          <p style="color: #64748b; margin-bottom: 1rem">
+            Automatically create a balanced weekly schedule
+          </p>
+
+          <input
+            id="studyHours"
+            type="number"
+            placeholder="Hours per day (e.g., 4)"
+            min="1"
+            max="12"
+          />
+          <input id="startTime" type="time" value="18:00" />
+
+          <div
+            style="
+              background: white;
+              padding: 1.5rem;
+              border-radius: 12px;
+              margin: 1rem 0;
+              border: 1px solid #e2e8f0;
+            "
+          >
+            <label
+              style="
+                display: block;
+                font-weight: 600;
+                margin-bottom: 1rem;
+                color: #1e293b;
+              "
+              >Select study days:</label
+            >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 0.75rem;
+              "
+            >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Monday"
+                  checked
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Monday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Tuesday"
+                  checked
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Tuesday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Wednesday"
+                  checked
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Wednesday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Thursday"
+                  checked
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Thursday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Friday"
+                  checked
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Friday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Saturday"
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Saturday</span>
+              </label>
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5rem;
+                  cursor: pointer;
+                  padding: 0.75rem;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                "
+                onmouseover="this.style.background = '#e9ecef'"
+                onmouseout="this.style.background = '#f8f9fa'"
+              >
+                <input
+                  type="checkbox"
+                  class="day-checkbox"
+                  value="Sunday"
+                  style="width: 18px; height: 18px; cursor: pointer"
+                />
+                <span>Sunday</span>
+              </label>
+            </div>
+          </div>
+
+          <button class="btn" onclick="generatePlan()">
+            🚀 Generate Weekly Plan
+          </button>
+        </div>
+      </div>
+
+      <!-- Manual Builder Tab -->
+      <div id="manualTab" class="tab-content">
+        <div class="mode-card">
+          <h3>Add Custom Session</h3>
+          <p style="color: #64748b; margin-bottom: 1rem">
+            Build your schedule session by session
+          </p>
+
+          <div class="manual-form">
+            <div class="form-row">
+              <select id="manualSubject" required>
+                <option value="">Select Subject</option>
+              </select>
+              <select id="manualDay" required>
+                <option value="">Select Day</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </div>
+
+            <div class="form-row">
+              <input id="manualTime" type="time" value="18:00" required />
+              <input
+                id="manualDuration"
+                type="number"
+                placeholder="Duration (hours)"
+                min="0.5"
+                max="8"
+                step="0.5"
+                required
+              />
+            </div>
+
+            <button class="btn" onclick="addManualSession()">
+              ✏️ Add Session
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates Tab -->
+      <div id="templatesTab" class="tab-content">
+        <div class="mode-card">
+          <h3>📁 My Templates</h3>
+          <p style="color: #64748b; margin-bottom: 1rem">
+            Save and reuse your favorite schedules
+          </p>
+
+          <!-- Save Current Plan as Template -->
+          <div
+            style="
+              background: #f8f9fa;
+              padding: 1rem;
+              border-radius: 8px;
+              margin-bottom: 1.5rem;
+            "
+          >
+            <h4 style="margin-bottom: 0.5rem">💾 Save Current Plan</h4>
+            <input
+              id="templateName"
+              type="text"
+              placeholder="Template name (e.g., Heavy DSA Week)"
+              style="margin-bottom: 0.5rem"
+            />
+            <input
+              id="templateDescription"
+              type="text"
+              placeholder="Description (optional)"
+            />
+            <button class="btn" onclick="saveAsTemplate()">
+              Save as Template
+            </button>
+          </div>
+
+          <!-- Templates List -->
+          <div id="templatesList" style="display: grid; gap: 1rem">
+            <!-- Dynamically loaded -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Plan Display -->
+      <div class="sessions-list">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+          "
+        >
+          <h3>Current Weekly Plan</h3>
+          <button class="btn btn-delete" onclick="clearAllSessions()">
+            🗑️ Clear All
+          </button>
+        </div>
+        <div id="sessionsList">
+          <div class="empty-sessions">
+            <p>No sessions yet. Generate a plan or add sessions manually!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Plan page loaded");
+
+      // Check auth
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login first");
+        window.location.href = "login.html";
+      }
+
+      let allSubjects = [];
+
+      // Tab switching
+      function switchTab(tab) {
+        // Update buttons
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        event.target.classList.add("active");
+
+        // Update content
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((content) => content.classList.remove("active"));
+        document.getElementById(tab + "Tab").classList.add("active");
+      }
+
+      // Load subjects for manual builder
+      async function loadSubjects() {
+        try {
+          allSubjects = await subjectsAPI.getAll();
+          console.log("Subjects loaded:", allSubjects);
+
+          const select = document.getElementById("manualSubject");
+          select.innerHTML = '<option value="">Select Subject</option>';
+
+          allSubjects.forEach((subject) => {
+            const option = document.createElement("option");
+            option.value = subject._id;
+            option.textContent = subject.name;
+            select.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Error loading subjects:", error);
+        }
+      }
+
+      // Quick Generate
+      async function generatePlan() {
+        console.log("Generating plan...");
+
+        const hours = Number(document.getElementById("studyHours").value);
+        const startTime = document.getElementById("startTime").value;
+
+        // Get selected days
+        const daysOfWeek = [];
+        document
+          .querySelectorAll(".day-checkbox:checked")
+          .forEach((checkbox) => {
+            daysOfWeek.push(checkbox.value);
+          });
+
+        if (!hours || hours <= 0) {
+          alert("Enter valid study hours");
+          return;
+        }
+        if (!startTime) {
+          alert("Select a start time");
+          return;
+        }
+        if (daysOfWeek.length === 0) {
+          alert("Select at least one study day");
+          return;
+        }
+
+        try {
+          console.log("Calling API to generate plan...");
+          const plan = await plansAPI.generate(hours, startTime, daysOfWeek);
+          console.log("Plan generated:", plan);
+
+          if (plan.error) {
+            alert("Error: " + plan.error);
+            return;
+          }
+
+          alert("✅ Plan generated successfully!");
+          loadCurrentPlan();
+        } catch (error) {
+          console.error("Error generating plan:", error);
+          alert("Failed to generate plan. Make sure you have subjects added.");
+        }
+      }
+
+      // Add Manual Session
+      async function addManualSession() {
+        const subjectId = document.getElementById("manualSubject").value;
+        const day = document.getElementById("manualDay").value;
+        const time = document.getElementById("manualTime").value;
+        const duration = parseFloat(
+          document.getElementById("manualDuration").value,
+        );
+
+        if (!subjectId || !day || !time || !duration) {
+          alert("Please fill all fields");
+          return;
+        }
+
+        const subject = allSubjects.find((s) => s._id === subjectId);
+        if (!subject) {
+          alert("Subject not found");
+          return;
+        }
+
+        console.log("Adding manual session:", {
+          subject: subject.name,
+          day,
+          time,
+          duration,
+        });
+
+        try {
+          const result = await plansAPI.addSession(
+            subjectId,
+            day,
+            time,
+            duration,
+          );
+          console.log("Session added:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ ${subject.name} session added for ${day} at ${time}!`);
+
+          // Clear form
+          document.getElementById("manualSubject").value = "";
+          document.getElementById("manualDay").value = "";
+          document.getElementById("manualDuration").value = "";
+
+          // Reload plan
+          loadCurrentPlan();
+        } catch (error) {
+          console.error("Error adding manual session:", error);
+          alert("Failed to add session: " + error.message);
+        }
+      }
+
+      // Load and display current plan
+      async function loadCurrentPlan() {
+        console.log("Loading current plan...");
+
+        try {
+          const plan = await plansAPI.getCurrent();
+          console.log("Current plan loaded:", plan);
+
+          // Check if plan exists and has sessions
+          if (!plan || !plan.sessions || plan.sessions.length === 0) {
+            console.log("No sessions found, showing empty state");
+            document.getElementById("sessionsList").innerHTML = `
+                <div class="empty-sessions">
+                    <p>No sessions yet. Generate a plan or add sessions manually!</p>
+                </div>
+            `;
+            return;
+          }
+
+          displaySessions(plan.sessions);
+        } catch (error) {
+          console.error("Error loading plan:", error);
+          document.getElementById("sessionsList").innerHTML = `
+            <div class="empty-sessions">
+                <p style="color: #dc3545;">Error loading plan. Please refresh the page.</p>
+            </div>
+        `;
+        }
+      }
+
+      function displaySessions(sessions) {
+        const container = document.getElementById("sessionsList");
+
+        if (sessions.length === 0) {
+          container.innerHTML = `
+            <div class="empty-sessions">
+                <p>No sessions yet. Generate a plan or add sessions manually!</p>
+            </div>
+        `;
+          return;
+        }
+
+        // Sort by day and time
+        const sortedSessions = [...sessions].sort((a, b) => {
+          return new Date(a.scheduledStart) - new Date(b.scheduledStart);
+        });
+
+        let html = "";
+        sortedSessions.forEach((session) => {
+          const date = new Date(session.scheduledStart);
+          const day = date.toLocaleDateString("en-US", { weekday: "long" });
+          const time = date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+
+          html += `
+            <div class="session-item ${session.completed ? "completed" : ""}">
+                <div class="session-info">
+                    <strong>${session.subjectName}</strong>
+                    <div class="session-meta">
+                        <span>📅 ${day}</span>
+                        <span>🕐 ${time}</span>
+                        <span>⏱️ ${session.allocated}h</span>
+                        <span>${session.completed ? "✅ Completed" : "⏳ Scheduled"}</span>
+                    </div>
+                </div>
+                <div class="session-actions">
+                    ${
+                      !session.completed
+                        ? `
+                        <button class="btn btn-small" onclick="markCompleted('${session._id}')">
+                            ✓ Complete
+                        </button>
+                    `
+                        : ""
+                    }
+                </div>
+            </div>
+        `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      async function markCompleted(sessionId) {
+        console.log("Marking session complete:", sessionId);
+
+        try {
+          await plansAPI.completeSession(sessionId);
+          alert("✅ Session marked as completed!");
+          loadCurrentPlan();
+        } catch (error) {
+          console.error("Error marking session complete:", error);
+          alert("Failed to mark session complete");
+        }
+      }
+
+      async function clearAllSessions() {
+        if (
+          !confirm(
+            "⚠️ Clear all sessions? This will delete your entire weekly plan.",
+          )
+        ) {
+          return;
+        }
+
+        console.log("Clearing all sessions...");
+
+        try {
+          const result = await plansAPI.clearAll();
+          console.log("Sessions cleared:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ Cleared ${result.deleted || 0} sessions successfully!`);
+
+          // Force UI to show empty state immediately
+          document.getElementById("sessionsList").innerHTML = `
+            <div class="empty-sessions">
+                <p>No sessions yet. Generate a plan or add sessions manually!</p>
+            </div>
+        `;
+
+          // Also reload to ensure sync
+          setTimeout(() => loadCurrentPlan(), 500);
+        } catch (error) {
+          console.error("Error clearing sessions:", error);
+
+          // If no plan found (404), that's okay - show empty state
+          alert("✅ Sessions cleared!");
+          document.getElementById("sessionsList").innerHTML = `
+            <div class="empty-sessions">
+                <p>No sessions yet. Generate a plan or add sessions manually!</p>
+            </div>
+        `;
+        }
+      }
+
+      // ==================== TEMPLATES ====================
+
+      async function loadTemplates() {
+        console.log("Loading templates...");
+
+        try {
+          const templates = await templatesAPI.getAll();
+          console.log("Templates loaded:", templates);
+          renderTemplates(templates);
+        } catch (error) {
+          console.error("Error loading templates:", error);
+        }
+      }
+
+      function renderTemplates(templates) {
+        const container = document.getElementById("templatesList");
+
+        if (templates.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #64748b;">
+                <p>No templates saved yet. Save your current plan as a template!</p>
+            </div>
+        `;
+          return;
+        }
+
+        let html = "";
+        templates.forEach((template) => {
+          html += `
+            <div style="background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.5rem 0;">${template.name}</h4>
+                        ${template.description ? `<p style="color: #64748b; font-size: 0.9rem; margin: 0 0 0.75rem 0;">${template.description}</p>` : ""}
+                        <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: #64748b;">
+                            <span>📚 ${template.sessions.length} sessions</span>
+                            <span>⏱️ ${template.totalHoursPerWeek}h/week</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-small" onclick="loadTemplate('${template._id}', '${template.name}')" style="background: #667eea;">
+                            📥 Load
+                        </button>
+                        <button class="btn btn-small btn-delete" onclick="deleteTemplate('${template._id}', '${template.name}')">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      async function saveAsTemplate() {
+        const name = document.getElementById("templateName").value.trim();
+        const description = document
+          .getElementById("templateDescription")
+          .value.trim();
+
+        if (!name) {
+          alert("Please enter a template name");
+          return;
+        }
+
+        console.log("Saving template:", { name, description });
+
+        try {
+          const result = await templatesAPI.save(name, description);
+          console.log("Template saved:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ Template "${name}" saved successfully!`);
+
+          // Clear inputs
+          document.getElementById("templateName").value = "";
+          document.getElementById("templateDescription").value = "";
+
+          // Reload templates
+          loadTemplates();
+        } catch (error) {
+          console.error("Error saving template:", error);
+          alert("Failed to save template: " + error.message);
+        }
+      }
+
+      async function loadTemplate(templateId, templateName) {
+        if (
+          !confirm(
+            `Load "${templateName}"? This will create a new weekly plan. Make sure to clear your current plan first if needed.`,
+          )
+        ) {
+          return;
+        }
+
+        console.log("Loading template:", templateId);
+
+        try {
+          const result = await templatesAPI.load(templateId);
+          console.log("Template loaded:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ ${result.message || "Template loaded successfully!"}`);
+
+          // Reload current plan
+          loadCurrentPlan();
+
+          // Switch to Quick Generate tab to see the plan
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((btn) => btn.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-content")
+            .forEach((content) => content.classList.remove("active"));
+          document.querySelectorAll(".tab-btn")[0].classList.add("active");
+          document.getElementById("quickTab").classList.add("active");
+        } catch (error) {
+          console.error("Error loading template:", error);
+          alert("Failed to load template: " + error.message);
+        }
+      }
+
+      async function deleteTemplate(templateId, templateName) {
+        if (!confirm(`Delete template "${templateName}"?`)) {
+          return;
+        }
+
+        console.log("Deleting template:", templateId);
+
+        try {
+          const result = await templatesAPI.delete(templateId);
+          console.log("Template deleted:", result);
+
+          if (result.error) {
+            alert("Error: " + result.error);
+            return;
+          }
+
+          alert(`✅ Template "${templateName}" deleted!`);
+          loadTemplates();
+        } catch (error) {
+          console.error("Error deleting template:", error);
+          alert("Failed to delete template: " + error.message);
+        }
+      }
+
+      // Initialize
+      loadSubjects();
+      loadCurrentPlan();
+      loadTemplates();
+    </script>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+  </body>
+</html>

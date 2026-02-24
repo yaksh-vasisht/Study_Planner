@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Smart Study Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header>
+      <h2>Smart Study Planner</h2>
+    </header>
+
+    <div class="auth-container">
+      <h2>Login</h2>
+
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Email" required />
+        <input type="password" id="password" placeholder="Password" required />
+
+        <button type="submit" class="btn">Login</button>
+      </form>
+
+      <div class="links">
+        <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+        <p><a href="index.html">Back to Home</a></p>
+      </div>
+    </div>
+
+    <footer>&copy; 2026 Smart Study Planner | Built by Yaksh Vasisht</footer>
+
+    <script src="api.js"></script>
+    <script>
+      console.log("Login page loaded");
+      console.log("API URL:", "http://localhost:5000/api");
+
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          console.log("Form submitted");
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+
+          console.log("Attempting login with:", email);
+
+          try {
+            const data = await authAPI.login(email, password);
+            console.log("Login response:", data);
+
+            if (data.error) {
+              console.error("Login error:", data.error);
+              alert("Login failed: " + data.error);
+            } else if (data.token) {
+              console.log("Login successful!");
+              alert("Login successful! Welcome " + data.user.name);
+
+              // Verify token is saved
+              const savedToken = localStorage.getItem("token");
+              console.log("Token saved check:", savedToken ? "YES" : "NO");
+
+              setTimeout(() => {
+                console.log("Redirecting to dashboard...");
+                window.location.href = "dashboard.html";
+              }, 1000);
+            } else {
+              console.error("No token in response!");
+              alert("Login failed: No token received");
+            }
+          } catch (error) {
+            console.error("Login exception:", error);
+            alert("Error: " + error.message);
+          }
+        });
+    </script>
+  </body>
+</html>
