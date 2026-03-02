@@ -200,6 +200,199 @@ router.put("/session/:sessionId/duration", async (req, res) => {
   }
 });
 
+// Get missed sessions
+router.get("/missed", async (req, res) => {
+  try {
+    const now = new Date();
+    const weekNumber = getWeekNumber(now);
+    const year = now.getFullYear();
+
+    const plan = await StudyPlan.findOne({
+      userId: req.userId,
+      weekNumber,
+      year,
+    });
+
+    if (!plan) {
+      return res.json({ missed: [] });
+    }
+
+    // Find sessions that are in the past and not completed
+    const missedSessions = plan.sessions.filter((session) => {
+      const sessionEnd = new Date(session.scheduledEnd);
+      return sessionEnd < now && !session.completed;
+    });
+
+    // Mark as skipped
+    missedSessions.forEach((session) => {
+      if (session.status !== "skipped") {
+        session.status = "skipped";
+      }
+    });
+
+    if (missedSessions.length > 0) {
+      await plan.save();
+    }
+
+    res.json({
+      missed: missedSessions,
+      count: missedSessions.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Find available time slots
+router.get("/available-slots", async (req, res) => {
+  try {
+    const { duration = 1 } = req.query;
+    const now = new Date();
+    const weekNumber = getWeekNumber(now);
+    const year = now.getFullYear();
+
+    const plan = await StudyPlan.findOne({
+      userId: req.userId,
+      weekNumber,
+      year,
+    });
+
+    // Generate potential slots for remaining days this week
+    const slots = [];
+    const daysOfWeek = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const timeSlots = [
+      "06:00",
+      "08:00",
+      "10:00",
+      "12:00",
+      "14:00",
+      "16:00",
+      "18:00",
+      "20:00",
+    ];
+
+    // Check next 7 days
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const date = new Date(now);
+      date.setDate(date.getDate() + dayOffset);
+      date.setHours(0, 0, 0, 0);
+
+      // Skip if in the past
+      if (date < now) continue;
+
+      const dayName = daysOfWeek[date.getDay()];
+
+      for (const timeSlot of timeSlots) {
+        const [hours, minutes] = timeSlot.split(":");
+        const slotStart = new Date(date);
+        slotStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+        // Skip if slot is in the past
+        if (slotStart < now) continue;
+
+        const slotEnd = new Date(slotStart);
+        slotEnd.setHours(slotEnd.getHours() + parseFloat(duration));
+
+        // Check if slot conflicts with existing sessions
+        let hasConflict = false;
+        if (plan) {
+          for (const session of plan.sessions) {
+            const sessionStart = new Date(session.scheduledStart);
+            const sessionEnd = new Date(session.scheduledEnd);
+
+            // Check overlap
+            if (slotStart < sessionEnd && slotEnd > sessionStart) {
+              hasConflict = true;
+              break;
+            }
+          }
+        }
+
+        if (!hasConflict) {
+          // Calculate quality score (morning/afternoon better than late night)
+          let quality = "good";
+          const hour = slotStart.getHours();
+          if (hour >= 8 && hour <= 12)
+            quality = "prime"; // Morning
+          else if (hour >= 14 && hour <= 18)
+            quality = "prime"; // Afternoon
+          else if (hour >= 20) quality = "late"; // Night
+
+          slots.push({
+            day: dayName,
+            date: slotStart.toISOString().split("T")[0],
+            time: timeSlot,
+            startTime: slotStart.toISOString(),
+            endTime: slotEnd.toISOString(),
+            quality,
+            score: quality === "prime" ? 10 : quality === "good" ? 5 : 2,
+          });
+        }
+      }
+    }
+
+    // Sort by score (best slots first)
+    slots.sort((a, b) => b.score - a.score);
+
+    res.json({
+      slots: slots.slice(0, 10), // Top 10 slots
+      total: slots.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reschedule session to new time
+router.post("/reschedule/:sessionId", async (req, res) => {
+  try {
+    const { startTime } = req.body;
+
+    if (!startTime) {
+      return res.status(400).json({ error: "Start time is required" });
+    }
+
+    const plan = await StudyPlan.findOne({
+      userId: req.userId,
+      "sessions._id": req.params.sessionId,
+    });
+
+    if (!plan) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    const session = plan.sessions.id(req.params.sessionId);
+    const duration = session.allocated;
+
+    // Update session times
+    const newStart = new Date(startTime);
+    const newEnd = new Date(newStart);
+    newEnd.setHours(newEnd.getHours() + Math.floor(duration));
+    newEnd.setMinutes(newEnd.getMinutes() + (duration % 1) * 60);
+
+    session.scheduledStart = newStart;
+    session.scheduledEnd = newEnd;
+    session.status = "scheduled"; // Reset from skipped to scheduled
+
+    await plan.save();
+
+    res.json({
+      message: "Session rescheduled successfully",
+      session,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Add manual session
 router.post("/session", async (req, res) => {
   try {

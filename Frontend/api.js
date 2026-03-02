@@ -206,6 +206,35 @@ const plansAPI = {
     return await res.json();
   },
 
+  async getMissedSessions() {
+    const res = await fetch(`${API_URL}/plans/missed`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    return await res.json();
+  },
+
+  async getAvailableSlots(duration = 1) {
+    const res = await fetch(
+      `${API_URL}/plans/available-slots?duration=${duration}`,
+      {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      },
+    );
+    return await res.json();
+  },
+
+  async rescheduleSession(sessionId, startTime) {
+    const res = await fetch(`${API_URL}/plans/reschedule/${sessionId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({ startTime }),
+    });
+    return await res.json();
+  },
+
   async addSession(subjectId, day, time, duration) {
     const res = await fetch(`${API_URL}/plans/session`, {
       method: "POST",
